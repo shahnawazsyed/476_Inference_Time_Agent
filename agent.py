@@ -7,8 +7,9 @@ Defines the main agent logic:
 - Calls `call_model_chat_completions()` from api.py indirectly via strategies.
 """
 
-from api import call_model_chat_completions
+from strategies import chain_of_thought
 
-def run_agent(input: str) -> str:
+def run_agent(prompt: str) -> str:
     #TODO: add decisioning for which reasoning strategy to use
-    return call_model_chat_completions(input)["text"]
+    result = chain_of_thought(prompt)
+    return result
