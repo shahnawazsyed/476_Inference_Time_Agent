@@ -11,7 +11,10 @@ from strategies import chain_of_thought
 
 def run_agent(prompt: str, domain: str) -> str:
     #TODO: add decisioning for which reasoning strategy to use
-    if domain is "math":
+    if domain == "math":
         isMath = True
-    result = chain_of_thought(prompt, isMath=True)
+    else:
+        isMath = False
+    #print(isMath)
+    result = chain_of_thought(prompt, isMath)
     return result
