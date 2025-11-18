@@ -17,15 +17,20 @@ def chain_of_thought(prompt: str) -> str: #could be good for planning, coding, f
     Chain-of-Thought (CoT) inference strategy.
     Encourages the model to reason step by step before extracting a deterministic answer.
     """
+    #print(prompt)
     cot_instruction = (
-        "When answering, reason step by step before stating the final answer. "
-        "At the end, clearly mark your final answer with 'Final Answer:'."
+        "Think through this problem step by step and solve it completely. "
+        "You must provide a complete solution, not just validate or critique. "
+        "At the very end, write 'Final Answer:' followed by your complete answer."
     )
-    cot_system_prompt = "You are an advanced reasoning assistant."
-    reasoning_resp = call_model_chat_completions(prompt=prompt, system=cot_system_prompt+" "+cot_instruction)["text"]
-    extract_answer_prompt = (
-        f"Here is a reasoning process:\n\n{reasoning_resp}\n\n"
-        "Extract and return ONLY the final answer, with no additional text or explanation."
+    cot_system_prompt = "You are a problem-solving assistant. Always provide complete solutions."
+    reasoning_resp = call_model_chat_completions(prompt=prompt, system=cot_system_prompt+" "+cot_instruction, max_tokens=8196)["text"]
+    #print(reasoning_resp)
+    extract_answer_system_prompt = (
+        "Extract the complete final answer from this solution. "
+        "For plans, extract all the steps. For numerical answers, extract just the number. "
+        "Reply with only the answer itself."
     )
-    answer = call_model_chat_completions(prompt=extract_answer_prompt)["text"]
+    answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=2048)["text"]
+    #print(answer)
     return answer
