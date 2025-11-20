@@ -8,6 +8,8 @@ chain of thought prompting
 
 self consistency -- maybe for math, common sense,
 
+DOMAINS: math, common sense, future prediction, coding, planning
+
 """
 from api import call_model_chat_completions #
 import random
@@ -16,6 +18,7 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 #TODO: track # of api calls
 #TODO: play around with temperature more
 #TODO: compare nltk/LLM call
+#TODO: add google search for common sense?
 
 
 def convertToPlainText(prompt: str):
@@ -85,7 +88,7 @@ def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 9):
             results[ans] += 1
         else:
             results[ans] = 1
-    print("len results", len(results))
+    #print("len results", len(results))
     majority_ans = max(results, key=results.get)
     return majority_ans
 
@@ -109,24 +112,26 @@ def chain_of_thought(prompt: str, temp: float = 0.0) -> str: #could be good for 
     answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=2048, temperature=temp)["text"]
     return answer.strip() if answer is not None else ""
 
+def get_sentiment_score(method: str, input: str):
+    if method == "api":
+        sentiment_prompt = f"Rate the sentiment of this feedback with respect to how correct and high-quality the answer is, from -1 (very negative, many issues) to 1 (very positive, excellent answer). Return only a number (float):\n\n{input}"
+        sentiment_score = float(call_model_chat_completions(prompt=sentiment_prompt, max_tokens=16, temperature=0.0)["text"].strip())
+    else:
+        sia = SentimentIntensityAnalyzer()
+        sentiment_score = sia.polarity_scores(input)['compound']
+    return sentiment_score
+
 def self_refine(prompt: str, domain: str, temp: float = 0.0) -> str:
     initial_ans = call_model_chat_completions(prompt=prompt, max_tokens=4096, temperature=temp)["text"]
     refine_sys_prompt = f"You are a critical evaluator specializing in {domain}. Review the answer provided and give constructive feedback on how to improve it. Focus on accuracy, completeness, clarity, and relevance to {domain}. Point out any errors, missing information, or areas that need better explanation. Be specific about what needs improvement."
     new_ans = initial_ans
     for _ in range (6):
         feedback = call_model_chat_completions(prompt=new_ans, system=refine_sys_prompt, max_tokens=4096, temperature=temp)["text"]
-        sentiment_score = sentiment_score("api", feedback)
-        if sentiment_score > 0.8:
+        sentiment_score = get_sentiment_score("api", feedback)
+        print("\nSentiment: ", sentiment_score)
+        if sentiment_score > 0.7:
             break 
         formatted_feedback = f"You are a helpful assistant. You previously provided this answer:\n\n{new_ans}\n\nHere is the feedback you received:\n\n{feedback}\n\nPlease provide a revised answer that addresses this feedback and improves upon your previous response."
         new_ans = call_model_chat_completions(prompt=prompt, system=formatted_feedback, max_tokens=4096, temperature=temp)["text"]
     return new_ans
 
-def sentiment_score(method: str, input: str):
-    if method == "api":
-        sentiment_prompt = f"Rate the sentiment of this feedback from -1 (very negative) to 1 (very positive). Return only a number (float):\n\n{input}"
-        sentiment_score = float(call_model_chat_completions(prompt=sentiment_prompt, max_tokens=16, temperature=0.0)["text"].strip())
-    else:
-        sia = SentimentIntensityAnalyzer()
-        sentiment_score = sia.polarity_scores(input)['compound']
-    return sentiment_score
