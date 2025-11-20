@@ -107,7 +107,6 @@ def chain_of_thought(prompt: str, temp: float = 0.0) -> str: #could be good for 
 
 
 def self_refine(prompt: str, temp: float = 0.0) -> str:
-    ans = ""
     initial_ans = call_model_chat_completions(prompt=prompt, max_tokens=4096, temperature=temp)["text"]
     refine_sys_prompt = ""
     for _ in range (10):
