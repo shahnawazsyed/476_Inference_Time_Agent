@@ -9,8 +9,10 @@ chain of thought prompting
 self consistency -- maybe for math, common sense,
 
 """
-from api import call_model_chat_completions
+from api import call_model_chat_completions #track # of api calls
 import random
+from nltk.sentiment import SentimentIntensityAnalyzer
+
 
 def convertToPlainText(prompt: str):
     conversion_sys_prompt = """
@@ -83,7 +85,6 @@ def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 9):
     majority_ans = max(results, key=results.get)
     return majority_ans
 
-
 def chain_of_thought(prompt: str, temp: float = 0.0) -> str: #could be good for planning, coding, future prediction (?)
     """
     Chain-of-Thought (CoT) inference strategy.
@@ -103,3 +104,27 @@ def chain_of_thought(prompt: str, temp: float = 0.0) -> str: #could be good for 
     )
     answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=2048, temperature=temp)["text"]
     return answer.strip() if answer is not None else ""
+
+
+def self_refine(prompt: str, temp: float = 0.0) -> str:
+    ans = ""
+    initial_ans = call_model_chat_completions(prompt=prompt, max_tokens=4096, temperature=temp)["text"]
+    refine_sys_prompt = ""
+    for _ in range (10):
+        feedback = call_model_chat_completions(prompt=prompt, system=refine_sys_prompt, max_tokens=4096, temperature=temp)["text"]
+        sentiment_score = sentiment_score("api", feedback)
+        if sentiment_score > 0.7:
+            break 
+        formatted_feedback = ""
+        new_ans = call_model_chat_completions(prompt=prompt, system=formatted_feedback, max_tokens=4096, temperature=temp)["text"]
+    return new_ans
+
+
+def sentiment_score(method: str, input: str):
+    if method == "api":
+        sentiment_prompt = f"Rate the sentiment of this feedback from -1 (very negative) to 1 (very positive). Return only a number (float):\n\n{feedback}"
+        sentiment_score = float(call_model_chat_completions(prompt=sentiment_prompt, max_tokens=10, temperature=0.0)["text"].strip())
+    else:
+        sia = SentimentIntensityAnalyzer()
+        sentiment_score = sia.polarity_scores(input)['compound']
+    return sentiment_score
