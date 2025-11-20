@@ -9,9 +9,13 @@ chain of thought prompting
 self consistency -- maybe for math, common sense,
 
 """
-from api import call_model_chat_completions #track # of api calls
+from api import call_model_chat_completions #
 import random
 from nltk.sentiment import SentimentIntensityAnalyzer
+
+#TODO: track # of api calls
+#TODO: play around with temperature more
+#TODO: compare nltk/LLM call
 
 
 def convertToPlainText(prompt: str):
@@ -121,7 +125,7 @@ def self_refine(prompt: str, domain: str, temp: float = 0.0) -> str:
 def sentiment_score(method: str, input: str):
     if method == "api":
         sentiment_prompt = f"Rate the sentiment of this feedback from -1 (very negative) to 1 (very positive). Return only a number (float):\n\n{input}"
-        sentiment_score = float(call_model_chat_completions(prompt=sentiment_prompt, max_tokens=10, temperature=0.0)["text"].strip())
+        sentiment_score = float(call_model_chat_completions(prompt=sentiment_prompt, max_tokens=16, temperature=0.0)["text"].strip())
     else:
         sia = SentimentIntensityAnalyzer()
         sentiment_score = sia.polarity_scores(input)['compound']
