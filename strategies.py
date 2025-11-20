@@ -80,8 +80,8 @@ def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 9):
         else:
             results[ans] = 1
     print("len results", len(results))
-    max_ans = max(results, key=results.get)
-    return max_ans
+    majority_ans = max(results, key=results.get)
+    return majority_ans
 
 
 def chain_of_thought(prompt: str, temp: float = 0.0) -> str: #could be good for planning, coding, future prediction (?)
