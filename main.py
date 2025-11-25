@@ -10,6 +10,14 @@ Responsibilities:
 4. Ensure efficient execution (<20 API calls per instance).
 """
 
+
+#TODO: track # of api calls
+#TODO: play around with temperature more (0.0 = deterministic)
+#TODO: add google search for common sense?
+#TODO: multi-agent debate?
+#TODO: add other domains to decisioning
+
+
 from datetime import datetime
 import json
 from agent import run_agent
@@ -23,7 +31,7 @@ def main():
     predictions_path = "outputs/predictions.jsonl"
     with open(input_path, "r") as f:
         all_inputs = json.load(f)
-    SAMPLE_SIZE = 100
+    SAMPLE_SIZE = 15
     if SAMPLE_SIZE and len(all_inputs) > SAMPLE_SIZE:
         random.seed(42)
         inputs = random.sample(all_inputs, SAMPLE_SIZE)
