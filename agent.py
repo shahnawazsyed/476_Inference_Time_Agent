@@ -7,21 +7,15 @@ Defines the main agent logic:
 - Calls `call_model_chat_completions()` from api.py indirectly via strategies.
 """
 
-from strategies import chain_of_thought, self_consistency, self_refine
+from strategies import chain_of_thought, self_consistency, self_refine, assumption_explicit_reasoning
 
 def run_agent(prompt: str, domain: str) -> str:
-    #TODO: add decisioning for which reasoning strategy to use
     if domain == "math":
         result = self_consistency(prompt, True)
     elif domain == "common_sense":
         result = self_consistency(prompt, False)
     elif domain == "planning" or domain == "coding":
-        if domain == "coding":
-            new_prompt = f"{prompt}\n\nImportant: Provide only the code without any comments or explanations."
-            result = self_refine(new_prompt, domain)
-        else:
-            result = self_refine(prompt, domain)
+        result = self_refine(prompt, domain)
     else:
-        print(f"Domain: {domain} not covered")
-        result = chain_of_thought(prompt)
+        result = assumption_explicit_reasoning(prompt, domain)
     return result
