@@ -136,7 +136,7 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
     )
     assumptions = call_model_chat_completions(prompt=init_ans, system=extraction_sys_prompt, max_tokens=4096)["text"]
     final_sys_prompt = f"You are a {domain} expert. You are given the original prompt and a list of assumptions that must hold for an answer. Generate a final answer that is consistent with the assumptions. If an assumption is unrealistic or likely false, note this explicitly. Assumptions: {assumptions}"
-    final_answer=self_refine(prompt, domain, max_iter=4) #double check max_iter
+    #final_answer=self_refine(prompt, domain, max_iter=4) #double check max_iter
     final_answer = call_model_chat_completions( #possibly add self refinement here
         prompt=prompt,
         system=final_sys_prompt,
