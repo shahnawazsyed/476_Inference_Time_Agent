@@ -120,7 +120,7 @@ def self_refine(prompt: str, domain: str, temp: float = 0.0) -> str:
         feedback = call_model_chat_completions(prompt=new_ans, system=refine_sys_prompt, max_tokens=4096, temperature=temp)["text"]
         sentiment_score = get_sentiment_score(feedback)
         #print("\nSentiment: ", sentiment_score)
-        if sentiment_score > 0.7:
+        if sentiment_score >= 0.7:
             break 
         formatted_feedback = f"You are a helpful assistant. You previously provided this answer:\n\n{new_ans}\n\nHere is the feedback you received:\n\n{feedback}\n\nPlease provide a revised answer that addresses this feedback and improves upon your previous response."
         new_ans = call_model_chat_completions(prompt=prompt, system=formatted_feedback, max_tokens=4096, temperature=temp)["text"]
