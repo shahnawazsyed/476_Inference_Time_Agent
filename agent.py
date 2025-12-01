@@ -7,7 +7,7 @@ Defines the main agent logic:
 - Calls `call_model_chat_completions()` from api.py indirectly via strategies.
 """
 
-from strategies import chain_of_thought, self_consistency, self_refine, assumption_explicit_reasoning
+from strategies import self_consistency, self_refine, assumption_explicit_reasoning
 
 def run_agent(prompt: str, domain: str) -> str:
     if domain == "math":

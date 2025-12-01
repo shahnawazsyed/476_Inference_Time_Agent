@@ -13,9 +13,7 @@ Responsibilities:
 
 #TODO: track # of api calls
 #TODO: play around with temperature more (0.0 = deterministic)
-#TODO: add google search for common sense?
-#TODO: multi-agent debate?
-#TODO: add other domains to decisioning
+#TODO: for some reason the coding is forgetting imports
 
 
 from datetime import datetime
@@ -31,14 +29,9 @@ def main():
     predictions_path = "outputs/predictions.jsonl"
     with open(input_path, "r") as f:
         all_inputs = json.load(f)
-    SAMPLE_SIZE = 15
-    if SAMPLE_SIZE and len(all_inputs) > SAMPLE_SIZE:
-        random.seed(42)
-        inputs = random.sample(all_inputs, SAMPLE_SIZE)
-        print(f"Randomly sampled {SAMPLE_SIZE} instances from {len(all_inputs)} total")
-    else:
-        inputs = all_inputs
-        print(f"Processing all {len(inputs)} instances")
+    SAMPLE_SIZE = 25
+    random.seed(42)
+    inputs = random.sample(all_inputs, SAMPLE_SIZE)
     predictions = []
     for i, input_item in tqdm(enumerate(inputs)):
         prompt = input_item["input"]
@@ -57,8 +50,7 @@ def main():
     print(f"\nPredictions saved to {predictions_path}")
     eval_results = evaluate_outputs(
         test_data=inputs,
-        predictions=[p["prediction"] for p in predictions],
-        verbose=True
+        predictions=[p["prediction"] for p in predictions]
     )
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     eval_output_path = f"outputs/{timestamp}_eval.json"

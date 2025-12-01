@@ -4,19 +4,20 @@ strategies.py
 Implements multiple inference-time reasoning algorithms.
 
 Each function here represents one of the following reasoning techniques:
-chain of thought prompting
-
-self consistency -- maybe for math, common sense,
+Chain of Thought prompting
+Self Consistency
+Self Refinement
+Assumpion Explicit Reasoning
 
 DOMAINS: math, common sense, future prediction, coding, planning
 
 """
-from api import call_model_chat_completions #
+from api import call_model_chat_completions
 import random
 
 
 
-def convertToPlainText(prompt: str):
+def convertToPlainText(prompt: str): #clean this up
     conversion_sys_prompt = """
             You are a LaTeX→PlainText converter whose job is to take a user prompt that may contain mathematical expressions written in LaTeX and produce a single, unambiguous, machine-friendly plain-English representation of the math. The output will be fed back to a solver, so do not evaluate, simplify, or solve anything — only convert notation to clear words and ASCII-like tokens. Follow these rules exactly:
             1. Output format
@@ -72,7 +73,7 @@ def convertToPlainText(prompt: str):
     ans = call_model_chat_completions(prompt=prompt, system=conversion_sys_prompt, max_tokens=4096)["text"]
     return ans.strip() if ans is not None else ""
 
-def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 9):
+def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 9, verbose=False):
     results = {}
     if isMath:
         prompt = convertToPlainText(prompt)
@@ -83,11 +84,12 @@ def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 9):
             results[ans] += 1
         else:
             results[ans] = 1
-    #print("len results", len(results))
+    if verbose:
+        print("Number of unique results", len(results))
     majority_ans = max(results, key=results.get)
     return majority_ans
 
-def chain_of_thought(prompt: str, temp: float = 0.0) -> str: #could be good for planning, coding, future prediction (?)
+def chain_of_thought(prompt: str, temp: float = 0.0) -> str:
     """
     Chain-of-Thought (CoT) inference strategy.
     Encourages the model to reason step by step before extracting a deterministic answer.
@@ -112,14 +114,15 @@ def get_sentiment_score(input: str):
     sentiment_score = float(call_model_chat_completions(prompt=sentiment_prompt, max_tokens=16, temperature=0.0)["text"].strip())
     return sentiment_score
 
-def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=6) -> str:
+def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=6, verbose=False) -> str:
     initial_ans = call_model_chat_completions(prompt=prompt, max_tokens=4096, temperature=temp)["text"]
     refine_sys_prompt = f"You are a critical evaluator specializing in {domain}. Review the answer provided to the following prompt: {prompt} and give constructive feedback on how to improve it. Focus on accuracy, completeness, clarity, and relevance to {domain}. Point out any errors, missing information, or areas that need better explanation. Be specific about what needs improvement."
     new_ans = initial_ans
-    for _ in range (max_iter):
+    for _ in range (max_iter): #3 calls per iteration
         feedback = call_model_chat_completions(prompt=new_ans, system=refine_sys_prompt, max_tokens=4096, temperature=temp)["text"]
         sentiment_score = get_sentiment_score(feedback)
-        #print("\nSentiment: ", sentiment_score)
+        if verbose:
+            print("\nSentiment: ", sentiment_score)
         if sentiment_score >= 0.7:
             break 
         formatted_feedback = f"You are a helpful assistant. You previously provided this answer:\n\n{new_ans}\n\nHere is the feedback you received:\n\n{feedback}\n\nPlease provide a revised answer that addresses this feedback and improves upon your previous response."
@@ -127,17 +130,17 @@ def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=6) -> str:
     return new_ans
 
 def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -> str:
-    init_ans = chain_of_thought(prompt, temp)
+    init_ans = chain_of_thought(prompt, temp) #2
     extraction_sys_prompt = (
         f"You are a critical evaluator specializing in {domain}. our task is to read the provided draft answer and extract all implicit assumptions that must be true for that answer to hold. Return only assumptions. "
     "Each assumption must be explicit, minimal, falsifiable, and phrased as a concrete condition about the world, data, behavior, or model inputs. Do not justify or evaluate them."
     "Do not restate the draft answer."
     "List assumptions as numbered items."
     )
-    assumptions = call_model_chat_completions(prompt=init_ans, system=extraction_sys_prompt, max_tokens=4096)["text"]
+    assumptions = call_model_chat_completions(prompt=init_ans, system=extraction_sys_prompt, max_tokens=4096)["text"] #3
     final_sys_prompt = f"You are a {domain} expert. You are given the original prompt and a list of assumptions that must hold for an answer. Generate a final answer that is consistent with the assumptions. If an assumption is unrealistic or likely false, note this explicitly. Assumptions: {assumptions}"
-    #final_answer=self_refine(prompt, domain, max_iter=4) #double check max_iter
-    final_answer = call_model_chat_completions( #possibly add self refinement here
+    final_answer=self_refine(final_sys_prompt, domain, max_iter=5)
+    final_answer = call_model_chat_completions(
         prompt=prompt,
         system=final_sys_prompt,
         max_tokens=4096
