@@ -90,10 +90,6 @@ def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 9, ve
     return majority_ans
 
 def chain_of_thought(prompt: str, temp: float = 0.0) -> str:
-    """
-    Chain-of-Thought (CoT) inference strategy.
-    Encourages the model to reason step by step before extracting a deterministic answer.
-    """
     cot_instruction = (
         "Think through this problem step by step and solve it completely. "
         "You must provide a complete solution, not just validate or critique. "
