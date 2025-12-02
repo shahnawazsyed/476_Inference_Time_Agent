@@ -116,7 +116,7 @@ def chain_of_thought(prompt: str, temp: float = 0.0) -> str:
 
 def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose=False) -> str:
     initial_ans = call_model_chat_completions(prompt=prompt, max_tokens=4096, temperature=temp)["text"]
-    refine_sys_prompt = f"You are a critical evaluator specializing in {domain}. Review the answer provided to the following prompt: {prompt} and give constructive feedback on how to improve it. Focus on accuracy, completeness, clarity, and relevance to {domain}. Point out any errors, missing information, or areas that need better explanation. Be specific about what needs improvement."
+    refine_sys_prompt = f"You are a critical evaluator specializing in {domain}. Review the answer provided to the following prompt: {prompt} and give constructive feedback on how to improve it. Focus on accuracy, completeness, clarity, and relevance to {domain}. Point out any errors, missing information, or areas that need better explanation. Be specific about what needs improvement. Do not provide a revised answer, only feedback."
     new_ans = initial_ans
     for _ in range (max_iter): #3 calls per iteration
         feedback = call_model_chat_completions(prompt=new_ans, system=refine_sys_prompt, max_tokens=2048, temperature=temp)["text"]
@@ -126,8 +126,15 @@ def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose
             print("\nsentiment: ", sentiment_score)
         if sentiment_score >= 0.7:
             break 
-        formatted_feedback = f"You are a helpful assistant. You previously provided this answer:\n\n{new_ans}\n\nHere is the feedback you received:\n\n{feedback}\n\nPlease provide a revised answer that addresses this feedback and improves upon your previous response."
-        new_ans = call_model_chat_completions(prompt=prompt, system=formatted_feedback, max_tokens=4096, temperature=temp)["text"]
+        SYS_PROMPT = "You are a helpful assistant. Provide the requested revised answer clearly and concisely. Do not include any of the previous prompts, answers, or feedback in your response."
+        formatted_feedback = (
+            f"Please revise the following answer based on the feedback provided:\n\n"
+            f"ORIGINAL PROMPT: {prompt}\n"
+            f"PREVIOUS ANSWER:\n{new_ans}\n\n"
+            f"FEEDBACK:\n{feedback}\n\n"
+            f"Provide a REVISED, complete answer now that addresses all points of the feedback."
+        )
+        new_ans = call_model_chat_completions(prompt=formatted_feedback, system=SYS_PROMPT, max_tokens=4096, temperature=temp)["text"]
     return new_ans
 
 def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -> str:
@@ -139,8 +146,31 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
     "List assumptions as numbered items."
     )
     assumptions = call_model_chat_completions(prompt=init_ans, system=extraction_sys_prompt, max_tokens=1024)["text"] #3
-    final_sys_prompt = f"You are a {domain} expert. You are given the original prompt and a list of assumptions that must hold for an answer. Generate a final answer that is consistent with the assumptions. If an assumption is unrealistic or likely false, note this explicitly. Assumptions: {assumptions}"
-    final_answer=self_refine(final_sys_prompt, domain, max_iter=3)
-    return final_answer
+    reasoning_sys_prompt = (
+        f"You are a {domain} expert. Use the following assumptions to construct your solution. "
+        "Think step-by-step. At the end of your solution, write 'Final Answer:' followed by the final, concise result. "
+        "Do not include any other commentary, and DO NOT list the assumptions separately. "
+        f"Assumptions: {assumptions}"
+    )
 
+    reasoning_resp = call_model_chat_completions(
+        prompt=prompt,                 
+        system=reasoning_sys_prompt, 
+        max_tokens=4096, 
+        temperature=temp
+    )["text"]
+    
+    # 4. Final Extraction Step: Guarantee concise output
+    extract_answer_system_prompt = (
+        "Extract the complete final answer from this solution. "
+        "Reply with only the final answer itself—no explanations, no commentary, and no preceding text."
+    )
+    final_answer = call_model_chat_completions(
+        prompt=reasoning_resp, 
+        system=extract_answer_system_prompt, 
+        max_tokens=256, 
+        temperature=temp
+    )["text"]
+    
+    return final_answer.strip()
 
