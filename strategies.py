@@ -7,7 +7,7 @@ Each function here represents one of the following reasoning techniques:
 Chain of Thought prompting
 Self Consistency
 Self Refinement
-Assumpion Explicit Reasoning
+Assumption Explicit Reasoning
 
 DOMAINS: math, common sense, future prediction, coding, planning
 
