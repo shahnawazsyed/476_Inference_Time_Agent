@@ -12,6 +12,7 @@ Assumpion Explicit Reasoning
 DOMAINS: math, common sense, future prediction, coding, planning
 
 """
+import re
 from api import call_model_chat_completions
 import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -93,6 +94,15 @@ def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 7, ve
         return majority_ans
     return ""
 
+def extract_final_answer(ans: str) -> str: #try extracting final answer using regex
+    if not __annotations__:
+        return ""
+    match = re.search(r'(?:final\s+answer\s*:?\s*)(.*)', ans, re.IGNORECASE | re.DOTALL)
+    if match:
+        answer = match.group(1).strip()
+        answer = answer.strip('"\'')
+        return answer
+    return ans.strip()
 def chain_of_thought(prompt: str, temp: float = 0.0) -> str:
     cot_instruction = (
         "Think through this problem step by step and solve it completely. "
@@ -112,7 +122,7 @@ def chain_of_thought(prompt: str, temp: float = 0.0) -> str:
         "OUTPUT 2: 1. Collect data. 2. Analyze. 3. Finalize"
     )
     answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=256, temperature=0.0)["text"]
-    final_ans = answer.strip() if answer else ""
+    final_ans = extract_answer_system_prompt(answer) #fallback
     if not final_ans: #if answer is empty just return the reasoning
         return reasoning_resp.strip() if reasoning_resp is not None else ""
     return final_ans if final_ans is not None else ""
@@ -125,8 +135,15 @@ def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose
     new_ans = initial_ans
     for _ in range (max_iter): #3 calls per iteration
         feedback = call_model_chat_completions(prompt=new_ans, system=refine_sys_prompt, max_tokens=2048, temperature=temp)["text"]
-        sentiment_prompt = f"Rate the sentiment of this feedback with respect to how correct and high-quality the answer is, from -1 (very negative, many issues) to 1 (very positive, excellent answer). Return only a number (float):\n\n{feedback}"
-        sentiment_score = float(call_model_chat_completions(prompt=sentiment_prompt, max_tokens=16, temperature=0.0)["text"].strip())
+        sentiment_prompt = f"Rate the sentiment of this feedback with respect to how correct and high-quality the answer is, from -1 (very negative, many issues) to 1 (very positive, excellent answer). Return ONLY a single number between -1 and 1 as a decimal (e.g., 0.7, -0.3, 0.9). Do not include any other text or explanation.\n\nFeedback:\n{feedback}"
+        sentiment_result = call_model_chat_completions(prompt=sentiment_prompt, max_tokens=16, temperature=0.0)["text"]
+        sentiment_text = sentiment_result.strip()
+        match = re.search(r'-?\d+\.?\d*', sentiment_text)
+        if match:
+            sentiment_score = float(match.group())
+            sentiment_score = max(-1.0, min(1.0, sentiment_score))
+        else:
+            sentiment_score = 0.0
         if verbose:
             print("\nsentiment: ", sentiment_score)
         if sentiment_score >= 0.7:
@@ -195,6 +212,7 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
         max_tokens=256, 
         temperature=0.0
     )["text"]
+    final_answer = extract_final_answer(final_answer)
     if not final_answer:
         return reasoning_resp.strip() if reasoning_resp else ""
     return final_answer.strip() if final_answer is not None else ""
