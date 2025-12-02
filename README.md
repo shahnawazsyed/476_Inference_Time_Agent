@@ -1,7 +1,7 @@
 # Final Project: Inference-Time Agent
 
 # Running
-python generate_answer_template.py
+$python generate_answer_template.py
 
 # Files
 - api.py – provided API interface
