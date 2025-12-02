@@ -32,8 +32,7 @@ def load_questions(path: Path) -> List[Dict[str, Any]]:
         raise ValueError("Input file must contain a list of question objects.")
     return data
 
-def get_prediction(question: Dict[str, Any]) -> Dict[str, str]:
-    """Helper function to run the agent on a single question."""
+def get_prediction(question: Dict[str, Any]) -> Dict[str, str]: #helper function to run the agent on a single question
     prompt = question["input"]
     domain = question.get("domain", "unknown") 
     prediction = run_agent(prompt, domain)

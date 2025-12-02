@@ -90,7 +90,7 @@ def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 7, ve
             else:
                 results[ans] = 1
     if verbose:
-        print("Number of unique results", len(results))
+        print("\nnum of unique results", len(results))
     if results:
         majority_ans = max(results, key=results.get)
         return majority_ans
@@ -112,10 +112,7 @@ def chain_of_thought(prompt: str, temp: float = 0.0) -> str:
     answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=256, temperature=temp)["text"]
     return answer.strip() if answer is not None else ""
 
-def get_sentiment_score(input: str):
-    sentiment_prompt = f"Rate the sentiment of this feedback with respect to how correct and high-quality the answer is, from -1 (very negative, many issues) to 1 (very positive, excellent answer). Return only a number (float):\n\n{input}"
-    sentiment_score = float(call_model_chat_completions(prompt=sentiment_prompt, max_tokens=16, temperature=0.0)["text"].strip())
-    return sentiment_score
+
 
 def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose=False) -> str:
     initial_ans = call_model_chat_completions(prompt=prompt, max_tokens=4096, temperature=temp)["text"]
@@ -123,9 +120,10 @@ def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose
     new_ans = initial_ans
     for _ in range (max_iter): #3 calls per iteration
         feedback = call_model_chat_completions(prompt=new_ans, system=refine_sys_prompt, max_tokens=2048, temperature=temp)["text"]
-        sentiment_score = get_sentiment_score(feedback)
+        sentiment_prompt = f"Rate the sentiment of this feedback with respect to how correct and high-quality the answer is, from -1 (very negative, many issues) to 1 (very positive, excellent answer). Return only a number (float):\n\n{feedback}"
+        sentiment_score = float(call_model_chat_completions(prompt=sentiment_prompt, max_tokens=16, temperature=0.0)["text"].strip())
         if verbose:
-            print("\nSentiment: ", sentiment_score)
+            print("\nsentiment: ", sentiment_score)
         if sentiment_score >= 0.7:
             break 
         formatted_feedback = f"You are a helpful assistant. You previously provided this answer:\n\n{new_ans}\n\nHere is the feedback you received:\n\n{feedback}\n\nPlease provide a revised answer that addresses this feedback and improves upon your previous response."
