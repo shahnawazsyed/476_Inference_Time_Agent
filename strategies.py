@@ -78,7 +78,7 @@ def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 7, ve
         prompt = convertToPlainText(prompt) 
     with ThreadPoolExecutor(max_workers=num_samples) as executor: #simulataneous API calls
         future_to_ans = {
-            executor.submit(chain_of_thought, prompt, random.uniform(0.5, 1.0)): i #randomized temp
+            executor.submit(chain_of_thought, prompt, random.uniform(0.5, 1.0), isMath=isMath): i #randomized temp
             for i in range(num_samples)
         }
         for future in as_completed(future_to_ans):
@@ -95,7 +95,7 @@ def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 7, ve
     return ""
 
 def extract_final_answer(ans: str) -> str: #try extracting final answer using regex
-    if not __annotations__:
+    if not ans:
         return ""
     match = re.search(r'(?:final\s+answer\s*:?\s*)(.*)', ans, re.IGNORECASE | re.DOTALL)
     if match:
@@ -103,12 +103,17 @@ def extract_final_answer(ans: str) -> str: #try extracting final answer using re
         answer = answer.strip('"\'')
         return answer
     return ans.strip()
-def chain_of_thought(prompt: str, temp: float = 0.0) -> str:
+def chain_of_thought(prompt: str, temp: float = 0.0, isMath: bool = False) -> str:
     cot_instruction = (
         "Think through this problem step by step and solve it completely. "
         "You must provide a complete solution, not just validate or critique. "
-        "At the very end, write 'Final Answer:' followed by your complete answer."
     )
+    if isMath:
+        cot_instruction += (
+            "For mathematical expressions, use plain text notation instead of LaTeX. "
+            "For example, use 'x squared' instead of 'x^2', 'a over b' instead of '\\frac{a}{b}'. "
+        )
+    cot_instruction += "At the very end, write 'Final Answer:' followed by your complete answer."
     cot_system_prompt = "You are a problem-solving assistant. Always provide complete solutions."
     reasoning_resp = call_model_chat_completions(prompt=prompt, system=cot_system_prompt+" "+cot_instruction, max_tokens=4096, temperature=temp)["text"]
     extract_answer_system_prompt = (
