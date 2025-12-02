@@ -109,8 +109,11 @@ def chain_of_thought(prompt: str, temp: float = 0.0) -> str:
         "For plans, extract all the steps. For numerical answers, extract just the number. "
         "Reply with only the answer itself."
     )
-    answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=256, temperature=temp)["text"]
-    return answer.strip() if answer is not None else ""
+    answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=256, temperature=0.0)["text"]
+    final_ans = answer.strip() if answer else ""
+    if not final_ans: #if answer is empty just return the reasoning
+        return reasoning_resp.strip()
+    return final_ans if final_ans is not None else ""
 
 
 
@@ -126,7 +129,12 @@ def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose
             print("\nsentiment: ", sentiment_score)
         if sentiment_score >= 0.7:
             break 
-        SYS_PROMPT = "You are a helpful assistant. Provide the requested revised answer clearly and concisely. Do not include any of the previous prompts, answers, or feedback in your response."
+        SYS_PROMPT = (
+            "You are a helpful assistant. You will be given a Previous Answer and Feedback. "
+            "Your job is to generate a REVISED ANSWER that addresses the feedback. "
+            "IMPORTANT: Output ONLY the revised answer. Do not acknowledge the feedback. "
+            "Do not start with 'Here is the revised plan'. Just output the content."
+        )
         formatted_feedback = (
             f"Please revise the following answer based on the feedback provided:\n\n"
             f"ORIGINAL PROMPT: {prompt}\n"
@@ -134,7 +142,10 @@ def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose
             f"FEEDBACK:\n{feedback}\n\n"
             f"Provide a REVISED, complete answer now that addresses all points of the feedback."
         )
-        new_ans = call_model_chat_completions(prompt=formatted_feedback, system=SYS_PROMPT, max_tokens=4096, temperature=temp)["text"]
+        prev = new_ans
+        new_ans = call_model_chat_completions(prompt=formatted_feedback, system=SYS_PROMPT, max_tokens=4096, temperature=temp)["text"].strip()
+        if new_ans == "": #if revision empty just return the orig
+            return prev
     return new_ans
 
 def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -> str:
@@ -146,6 +157,8 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
     "List assumptions as numbered items."
     )
     assumptions = call_model_chat_completions(prompt=init_ans, system=extraction_sys_prompt, max_tokens=1024)["text"] #3
+    if not assumptions: #no assumptions found
+        assumptions = "No specific assumptions found."
     reasoning_sys_prompt = (
         f"You are a {domain} expert. Use the following assumptions to construct your solution. "
         "Think step-by-step. At the end of your solution, write 'Final Answer:' followed by the final, concise result. "
@@ -166,8 +179,9 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
         prompt=reasoning_resp, 
         system=extract_answer_system_prompt, 
         max_tokens=256, 
-        temperature=temp
+        temperature=0.0
     )["text"]
-    
+    if not final_answer:
+        return reasoning_resp.strip() if reasoning_resp else ""
     return final_answer.strip() if final_answer is not None else ""
 
