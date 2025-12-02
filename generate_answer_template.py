@@ -19,9 +19,9 @@ from agent import run_agent
 from concurrent.futures import ThreadPoolExecutor
 
 
-#TODO: play around with temperature more (0.0 = deterministic)
+#TODO: review # of API calls
 #TODO: fix convert to plain text
-#TODO: planning and coding (self refine) doens't really work
+#TODO: planning and coding (self refine) doens't really work (empty string or returning a plan)
 
 INPUT_PATH = Path("cse_476_final_project_test_data.json")
 OUTPUT_PATH = Path("cse_476_final_project_answers.json")
