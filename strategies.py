@@ -14,6 +14,7 @@ DOMAINS: math, common sense, future prediction, coding, planning
 """
 from api import call_model_chat_completions
 import random
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 
@@ -73,21 +74,27 @@ def convertToPlainText(prompt: str): #clean this up
     ans = call_model_chat_completions(prompt=prompt, system=conversion_sys_prompt, max_tokens=4096)["text"]
     return ans.strip() if ans is not None else ""
 
-def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 5, verbose=False):
+def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 7, verbose=False): #runs CoT in parallel
     results = {}
     if isMath:
-        prompt = convertToPlainText(prompt)
-    for _ in range(num_samples):
-        temp = random.uniform(0.5, 1.0) #could change range depending on domain
-        ans = chain_of_thought(prompt, temp=temp)
-        if ans in results.keys():
-            results[ans] += 1
-        else:
-            results[ans] = 1
+        prompt = convertToPlainText(prompt) 
+    with ThreadPoolExecutor(max_workers=num_samples) as executor: #simulataneous API calls
+        future_to_ans = {
+            executor.submit(chain_of_thought, prompt, random.uniform(0.5, 1.0)): i #randomized temp
+            for i in range(num_samples)
+        }
+        for future in as_completed(future_to_ans):
+            ans = future.result()   
+            if ans in results:
+                results[ans] += 1
+            else:
+                results[ans] = 1
     if verbose:
         print("Number of unique results", len(results))
-    majority_ans = max(results, key=results.get)
-    return majority_ans
+    if results:
+        majority_ans = max(results, key=results.get)
+        return majority_ans
+    return ""
 
 def chain_of_thought(prompt: str, temp: float = 0.0) -> str:
     cot_instruction = (
@@ -136,11 +143,6 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
     assumptions = call_model_chat_completions(prompt=init_ans, system=extraction_sys_prompt, max_tokens=1024)["text"] #3
     final_sys_prompt = f"You are a {domain} expert. You are given the original prompt and a list of assumptions that must hold for an answer. Generate a final answer that is consistent with the assumptions. If an assumption is unrealistic or likely false, note this explicitly. Assumptions: {assumptions}"
     final_answer=self_refine(final_sys_prompt, domain, max_iter=3)
-    final_answer = call_model_chat_completions(
-        prompt=prompt,
-        system=final_sys_prompt,
-        max_tokens=4096
-    )["text"]
     return final_answer
 
 
