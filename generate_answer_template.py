@@ -17,9 +17,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 #TODO: review # of API calls
-#TODO: fix convert to plain text
-#TODO: planning and coding (self refine) doens't really work (empty string or returning a plan)
-#TODO: math answers returning in LaTeX, final answer extraction not working
+#TODO: math answers returning in LaTeX
+#TODO: 1/6 of outputs = "" - ok?
 
 INPUT_PATH = Path("cse_476_final_project_test_data.json")
 OUTPUT_PATH = Path("cse_476_final_project_answers.json")
