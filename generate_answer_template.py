@@ -16,10 +16,13 @@ from pathlib import Path
 from typing import Any, Dict, List
 from tqdm import tqdm
 from agent import run_agent
+from concurrent.futures import ThreadPoolExecutor
 
 
 INPUT_PATH = Path("cse_476_final_project_test_data.json")
 OUTPUT_PATH = Path("cse_476_final_project_answers.json")
+# --- CONCURRENCY SETTING ---
+MAX_WORKERS = 32
 
 
 def load_questions(path: Path) -> List[Dict[str, Any]]:
@@ -29,26 +32,21 @@ def load_questions(path: Path) -> List[Dict[str, Any]]:
         raise ValueError("Input file must contain a list of question objects.")
     return data
 
+def get_prediction(question: Dict[str, Any]) -> Dict[str, str]:
+    """Helper function to run the agent on a single question."""
+    prompt = question["input"]
+    domain = question.get("domain", "unknown") 
+    prediction = run_agent(prompt, domain)
+    return {"output": prediction}
 
-def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
-    """
-    Iterates through questions, calls the agent, and formats the output.
-    """
-    answers = []
-    
-    # Using tqdm for a progress bar, identical to main.py
-    for question in tqdm(questions, desc="Generating Answers"):
-        prompt = question["input"]
-        # using .get() with a default is safer for test data, 
-        # but you can use question["domain"] if you are sure the key exists.
-        domain = question.get("domain", "unknown") 
-        
-        # Call the agent logic imported from agent.py
-        prediction = run_agent(prompt, domain)
-        
-        # Append only the output string as required by the validate_results function
-        answers.append({"output": prediction})
-        
+def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]: #Iterates through questions CONCURRENTLY
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor: #use ThreadPoolExecutor for concurrent processing
+        results_iterator = executor.map(get_prediction, questions)
+        answers = list(tqdm(
+            results_iterator, 
+            total=len(questions), 
+            desc=f"Generating Answers (Concurrent, {MAX_WORKERS} Workers)"
+        ))
     return answers
 
 
@@ -91,4 +89,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
