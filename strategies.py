@@ -152,15 +152,12 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
         "Do not include any other commentary, and DO NOT list the assumptions separately. "
         f"Assumptions: {assumptions}"
     )
-
     reasoning_resp = call_model_chat_completions(
         prompt=prompt,                 
         system=reasoning_sys_prompt, 
         max_tokens=4096, 
         temperature=temp
     )["text"]
-    
-    # 4. Final Extraction Step: Guarantee concise output
     extract_answer_system_prompt = (
         "Extract the complete final answer from this solution. "
         "Reply with only the final answer itself—no explanations, no commentary, and no preceding text."
