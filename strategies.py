@@ -169,5 +169,5 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
         temperature=temp
     )["text"]
     
-    return final_answer.strip()
+    return final_answer.strip() if final_answer is not None else ""
 
