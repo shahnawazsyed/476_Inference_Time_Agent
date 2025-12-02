@@ -14,6 +14,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, Dict, List
+from tqdm import tqdm
+from agent import run_agent
 
 
 INPUT_PATH = Path("cse_476_final_project_test_data.json")
@@ -29,13 +31,24 @@ def load_questions(path: Path) -> List[Dict[str, Any]]:
 
 
 def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    """
+    Iterates through questions, calls the agent, and formats the output.
+    """
     answers = []
-    for idx, question in enumerate(questions, start=1):
-        # Example: assume you have an agent loop that produces an answer string.
-        # real_answer = agent_loop(question["input"])
-        # answers.append({"output": real_answer})
-        placeholder_answer = f"Placeholder answer for question {idx}"
-        answers.append({"output": placeholder_answer})
+    
+    # Using tqdm for a progress bar, identical to main.py
+    for question in tqdm(questions, desc="Generating Answers"):
+        prompt = question["input"]
+        # using .get() with a default is safer for test data, 
+        # but you can use question["domain"] if you are sure the key exists.
+        domain = question.get("domain", "unknown") 
+        
+        # Call the agent logic imported from agent.py
+        prediction = run_agent(prompt, domain)
+        
+        # Append only the output string as required by the validate_results function
+        answers.append({"output": prediction})
+        
     return answers
 
 

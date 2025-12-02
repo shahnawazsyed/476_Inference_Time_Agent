@@ -73,7 +73,7 @@ def convertToPlainText(prompt: str): #clean this up
     ans = call_model_chat_completions(prompt=prompt, system=conversion_sys_prompt, max_tokens=4096)["text"]
     return ans.strip() if ans is not None else ""
 
-def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 9, verbose=False):
+def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 5, verbose=False):
     results = {}
     if isMath:
         prompt = convertToPlainText(prompt)
@@ -102,7 +102,7 @@ def chain_of_thought(prompt: str, temp: float = 0.0) -> str:
         "For plans, extract all the steps. For numerical answers, extract just the number. "
         "Reply with only the answer itself."
     )
-    answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=2048, temperature=temp)["text"]
+    answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=256, temperature=temp)["text"]
     return answer.strip() if answer is not None else ""
 
 def get_sentiment_score(input: str):
@@ -110,12 +110,12 @@ def get_sentiment_score(input: str):
     sentiment_score = float(call_model_chat_completions(prompt=sentiment_prompt, max_tokens=16, temperature=0.0)["text"].strip())
     return sentiment_score
 
-def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=6, verbose=False) -> str:
+def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose=False) -> str:
     initial_ans = call_model_chat_completions(prompt=prompt, max_tokens=4096, temperature=temp)["text"]
     refine_sys_prompt = f"You are a critical evaluator specializing in {domain}. Review the answer provided to the following prompt: {prompt} and give constructive feedback on how to improve it. Focus on accuracy, completeness, clarity, and relevance to {domain}. Point out any errors, missing information, or areas that need better explanation. Be specific about what needs improvement."
     new_ans = initial_ans
     for _ in range (max_iter): #3 calls per iteration
-        feedback = call_model_chat_completions(prompt=new_ans, system=refine_sys_prompt, max_tokens=4096, temperature=temp)["text"]
+        feedback = call_model_chat_completions(prompt=new_ans, system=refine_sys_prompt, max_tokens=2048, temperature=temp)["text"]
         sentiment_score = get_sentiment_score(feedback)
         if verbose:
             print("\nSentiment: ", sentiment_score)
@@ -133,9 +133,9 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
     "Do not restate the draft answer."
     "List assumptions as numbered items."
     )
-    assumptions = call_model_chat_completions(prompt=init_ans, system=extraction_sys_prompt, max_tokens=4096)["text"] #3
+    assumptions = call_model_chat_completions(prompt=init_ans, system=extraction_sys_prompt, max_tokens=1024)["text"] #3
     final_sys_prompt = f"You are a {domain} expert. You are given the original prompt and a list of assumptions that must hold for an answer. Generate a final answer that is consistent with the assumptions. If an assumption is unrealistic or likely false, note this explicitly. Assumptions: {assumptions}"
-    final_answer=self_refine(final_sys_prompt, domain, max_iter=5)
+    final_answer=self_refine(final_sys_prompt, domain, max_iter=3)
     final_answer = call_model_chat_completions(
         prompt=prompt,
         system=final_sys_prompt,

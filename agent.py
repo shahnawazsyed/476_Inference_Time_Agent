@@ -16,6 +16,6 @@ def run_agent(prompt: str, domain: str) -> str:
         result = self_consistency(prompt, False)
     elif domain == "planning" or domain == "coding":
         result = self_refine(prompt, domain)
-    else:
+    else: #future prediction
         result = assumption_explicit_reasoning(prompt, domain)
     return result
