@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 
-def convertToPlainText(prompt: str): #clean this up
+def convertToPlainText(prompt: str): #convert from Latex to plain text
     conversion_sys_prompt = """
             You are a LaTeX→PlainText converter whose job is to take a user prompt that may contain mathematical expressions written in LaTeX and produce a single, unambiguous, machine-friendly plain-English representation of the math. The output will be fed back to a solver, so do not evaluate, simplify, or solve anything — only convert notation to clear words and ASCII-like tokens. Follow these rules exactly:
             1. Output format
@@ -53,9 +53,7 @@ def convertToPlainText(prompt: str): #clean this up
             5. Preserve non-math text
             - Keep surrounding normal-language text as-is, but convert any LaTeX math segments inline or display math into the plain-text math representation.
             - Maintain sentence structure and punctuation so the converted prompt can be fed back unchanged except for math notation.
-            6. Do not translate
-            - Do not translate code blocks, filenames, or computer-language snippets unless they are mathematical expressions in LaTeX.
-            7. Examples
+            6. Examples
             - Input (user): Solve \\frac{d}{dx}\\left(x^2 \\sin x\\right)=0 for x
                 - Output: Solve derivative of (x squared times sin(x)) with respect to x equals 0 for x
             - Input: Compute \\int_0^{\\pi/2} \\sin^2 x\\,dx
@@ -70,7 +68,6 @@ def convertToPlainText(prompt: str): #clean this up
                 - Output: Let f(x) = ln(x squared plus 1). Compute f prime of x.
             Act exactly as above for every user message. Always convert math to plain text without solving or commenting.
             """
-
     ans = call_model_chat_completions(prompt=prompt, system=conversion_sys_prompt, max_tokens=4096)["text"]
     return ans.strip() if ans is not None else ""
 
@@ -107,12 +104,17 @@ def chain_of_thought(prompt: str, temp: float = 0.0) -> str:
     extract_answer_system_prompt = (
         "Extract the complete final answer from this solution. "
         "For plans, extract all the steps. For numerical answers, extract just the number. "
-        "Reply with only the answer itself."
+        "Reply with only the final answer itself—no explanations, no commentary, and no preceding text.\n"
+        "--- Examples ---\n"
+        "INPUT 1: The total cost is $25, and the tax is $2.50. Final Answer: 27.50\n"
+        "OUTPUT 1: 27.50\n"
+        "INPUT 2: The required steps are: 1. Collect data. 2. Analyze. 3. Finalize. Final Answer: 1. Collect data. 2. Analyze. 3. Finalize\n"
+        "OUTPUT 2: 1. Collect data. 2. Analyze. 3. Finalize"
     )
     answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=256, temperature=0.0)["text"]
     final_ans = answer.strip() if answer else ""
     if not final_ans: #if answer is empty just return the reasoning
-        return reasoning_resp.strip()
+        return reasoning_resp.strip() if reasoning_resp is not None else ""
     return final_ans if final_ans is not None else ""
 
 
@@ -133,7 +135,7 @@ def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose
             "You are a helpful assistant. You will be given a Previous Answer and Feedback. "
             "Your job is to generate a REVISED ANSWER that addresses the feedback. "
             "IMPORTANT: Output ONLY the revised answer. Do not acknowledge the feedback. "
-            "Do not start with 'Here is the revised plan'. Just output the content."
+            "Do NOT start with 'Here is the revised plan'. Just output the content."
         )
         formatted_feedback = (
             f"Please revise the following answer based on the feedback provided:\n\n"
@@ -154,7 +156,13 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
         f"You are a critical evaluator specializing in {domain}. our task is to read the provided draft answer and extract all implicit assumptions that must be true for that answer to hold. Return only assumptions. "
     "Each assumption must be explicit, minimal, falsifiable, and phrased as a concrete condition about the world, data, behavior, or model inputs. Do not justify or evaluate them."
     "Do not restate the draft answer."
-    "List assumptions as numbered items."
+    "List assumptions as numbered items.\n"
+    "--- Example ---\n"
+    "INPUT: The project will be completed in 5 days because all tasks are budgeted for 5 days of work.\n"
+    "OUTPUT:\n"
+    "1. The daily productivity of the team matches the estimated effort in the budget.\n"
+    "2. No external factors will interfere with the planned schedule.\n"
+    "3. The resources required for the tasks are all available immediately."
     )
     assumptions = call_model_chat_completions(prompt=init_ans, system=extraction_sys_prompt, max_tokens=1024)["text"] #3
     if not assumptions: #no assumptions found
@@ -173,7 +181,13 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
     )["text"]
     extract_answer_system_prompt = (
         "Extract the complete final answer from this solution. "
-        "Reply with only the final answer itself—no explanations, no commentary, and no preceding text."
+        "For plans, extract all the steps. For numerical answers, extract just the number. "
+        "Reply with only the final answer itself—no explanations, no commentary, and no preceding text.\n"
+        "--- Example ---\n"
+        "INPUT 1: The final calculation resulted in a value of 42. Final Answer: 42\n"
+        "OUTPUT 1: 42\n"
+        "INPUT 2: The required steps are: 1. Collect data. 2. Analyze. 3. Finalize. Final Answer: 1. Collect data. 2. Analyze. 3. Finalize\n"
+        "OUTPUT 2: 1. Collect data. 2. Analyze. 3. Finalize"
     )
     final_answer = call_model_chat_completions(
         prompt=reasoning_resp, 

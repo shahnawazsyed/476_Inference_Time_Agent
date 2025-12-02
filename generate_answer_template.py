@@ -2,9 +2,6 @@
 """
 Generate a placeholder answer file that matches the expected auto-grader format.
 
-Replace the placeholder logic inside `build_answers()` with your own agent loop
-before submitting so the ``output`` fields contain your real predictions.
-
 Reads the input questions from cse_476_final_project_test_data.json and writes
 an answers JSON file where each entry contains a string under the "output" key.
 """
@@ -22,11 +19,11 @@ from concurrent.futures import ThreadPoolExecutor
 #TODO: review # of API calls
 #TODO: fix convert to plain text
 #TODO: planning and coding (self refine) doens't really work (empty string or returning a plan)
+#TODO: math answers returning in LaTeX, final answer extraction not working
 
 INPUT_PATH = Path("cse_476_final_project_test_data.json")
 OUTPUT_PATH = Path("cse_476_final_project_answers.json")
-# --- CONCURRENCY SETTING ---
-MAX_WORKERS = 32
+MAX_WORKERS = 64 #concurrency setting
 
 
 def load_questions(path: Path) -> List[Dict[str, Any]]:
@@ -42,7 +39,7 @@ def get_prediction(question: Dict[str, Any]) -> Dict[str, str]: #helper function
     prediction = run_agent(prompt, domain)
     return {"output": prediction}
 
-def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]: #Iterates through questions CONCURRENTLY
+def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]: #Iterates through questions CONCURRENTLY (faster)
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor: #use ThreadPoolExecutor for concurrent processing
         results_iterator = executor.map(get_prediction, questions)
         answers = list(tqdm(

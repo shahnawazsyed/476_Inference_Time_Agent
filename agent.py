@@ -1,10 +1,7 @@
 """
 agent.py
 
-Defines the main agent logic:
-- Selects which reasoning strategy to apply for each input example.
-- Manages prompts, responses, and postprocessing.
-- Calls `call_model_chat_completions()` from api.py indirectly via strategies.
+Defines the main agent logic: Selects which reasoning strategy to apply for each input example
 """
 
 from strategies import self_consistency, self_refine, assumption_explicit_reasoning
