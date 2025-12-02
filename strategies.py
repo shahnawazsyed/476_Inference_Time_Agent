@@ -122,7 +122,7 @@ def chain_of_thought(prompt: str, temp: float = 0.0) -> str:
         "OUTPUT 2: 1. Collect data. 2. Analyze. 3. Finalize"
     )
     answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=256, temperature=0.0)["text"]
-    final_ans = extract_answer_system_prompt(answer) #fallback
+    final_ans = extract_final_answer(answer) #fallback
     if not final_ans: #if answer is empty just return the reasoning
         return reasoning_resp.strip() if reasoning_resp is not None else ""
     return final_ans if final_ans is not None else ""
