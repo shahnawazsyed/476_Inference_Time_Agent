@@ -9,8 +9,6 @@ Self Consistency
 Self Refinement
 Assumption Explicit Reasoning
 
-DOMAINS: math, common sense, future prediction, coding, planning
-
 """
 import re
 from api import call_model_chat_completions
