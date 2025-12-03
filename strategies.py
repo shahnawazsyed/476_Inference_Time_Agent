@@ -148,21 +148,26 @@ def chain_of_thought(prompt: str, temp: float = 0.0, isMath: bool = False) -> st
     cot_instruction += "At the very end, write 'Final Answer:' followed by your complete answer."
     cot_system_prompt = "You are a problem-solving assistant. Always provide complete solutions."
     reasoning_resp = call_model_chat_completions(prompt=prompt, system=cot_system_prompt+" "+cot_instruction, max_tokens=4096, temperature=temp)["text"]
-    extract_answer_system_prompt = (
-        "Extract the complete final answer from this solution. "
-        "For plans, extract all the steps. For numerical answers, extract just the number. "
-        "Reply with only the final answer itself—no explanations, no commentary, and no preceding text.\n"
-        "--- Examples ---\n"
-        "INPUT 1: The total cost is $25, and the tax is $2.50. Final Answer: 27.50\n"
-        "OUTPUT 1: 27.50\n"
-        "INPUT 2: The required steps are: 1. Collect data. 2. Analyze. 3. Finalize. Final Answer: 1. Collect data. 2. Analyze. 3. Finalize\n"
-        "OUTPUT 2: 1. Collect data. 2. Analyze. 3. Finalize"
-    )
-    answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=256, temperature=0.0)["text"]
-    final_ans = extract_final_answer(answer, isMath=isMath) #fallback
-    if not final_ans: #if answer is empty just return the reasoning
-        return reasoning_resp.strip() if reasoning_resp is not None else ""
-    return final_ans if final_ans is not None else ""
+    final_ans = extract_final_answer(answer, isMath=isMath)
+    if len(final_ans) > 500 or final_ans == reasoning_resp: #i.e. extraction didnt work
+        extract_answer_system_prompt = (
+            "Extract the complete final answer from this solution. "
+            "For multiple choice questions, return ONLY the letter (A, B, C, D, or E). "
+            "For numerical answers, return just the number. "
+            "For plans or lists, extract all the steps. "
+            "For reasoning questions, extract the conclusion. "
+            "Reply with only the final answer itself—no explanations, no commentary.\n"
+            "If you cannot determine a clear final answer, return the last meaningful statement.\n"
+            "--- Examples ---\n"
+            "INPUT 1: The total cost is $25, and the tax is $2.50. Final Answer: 27.50\n"
+            "OUTPUT 1: 27.50\n"
+            "INPUT 2: The required steps are: 1. Collect data. 2. Analyze. 3. Finalize. Final Answer: 1. Collect data. 2. Analyze. 3. Finalize\n"
+            "OUTPUT 2: 1. Collect data. 2. Analyze. 3. Finalize"
+        )
+        answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=512, temperature=0.0)["text"]
+        if answer and answer.strip():
+            return answer.strip()
+    return final_ans if final_ans else reasoning_resp.strip()
 
 def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose=False) -> str:
     initial_ans = call_model_chat_completions(prompt=prompt, max_tokens=4096, temperature=temp)["text"]
