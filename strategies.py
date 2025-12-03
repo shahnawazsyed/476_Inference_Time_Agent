@@ -17,7 +17,6 @@ from api import call_model_chat_completions
 import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-
 def convertToPlainText(prompt: str): #convert from Latex to plain text
     conversion_sys_prompt = """
             You are a LaTeX→PlainText converter whose job is to take a user prompt that may contain mathematical expressions written in LaTeX and produce a single, unambiguous, machine-friendly plain-English representation of the math. The output will be fed back to a solver, so do not evaluate, simplify, or solve anything — only convert notation to clear words and ASCII-like tokens. Follow these rules exactly:
@@ -102,6 +101,7 @@ def extract_final_answer(ans: str) -> str: #try extracting final answer using re
         answer = answer.strip('"\'')
         return answer
     return ans.strip()
+
 def chain_of_thought(prompt: str, temp: float = 0.0, isMath: bool = False) -> str:
     cot_instruction = (
         "Think through this problem step by step and solve it completely. "
@@ -130,8 +130,6 @@ def chain_of_thought(prompt: str, temp: float = 0.0, isMath: bool = False) -> st
     if not final_ans: #if answer is empty just return the reasoning
         return reasoning_resp.strip() if reasoning_resp is not None else ""
     return final_ans if final_ans is not None else ""
-
-
 
 def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose=False) -> str:
     initial_ans = call_model_chat_completions(prompt=prompt, max_tokens=4096, temperature=temp)["text"]
@@ -220,4 +218,3 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
     if not final_answer:
         return reasoning_resp.strip() if reasoning_resp else ""
     return final_answer.strip() if final_answer is not None else ""
-
