@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Any, Dict, List
 from tqdm import tqdm
 from agent import run_agent
-from concurrent.futures import ThreadPoolExecutor
 
 
 #TODO: review # of API calls
@@ -22,7 +21,6 @@ from concurrent.futures import ThreadPoolExecutor
 
 INPUT_PATH = Path("cse_476_final_project_test_data.json")
 OUTPUT_PATH = Path("cse_476_final_project_answers.json")
-MAX_WORKERS = 64 #concurrency setting
 
 
 def load_questions(path: Path) -> List[Dict[str, Any]]:
@@ -32,20 +30,14 @@ def load_questions(path: Path) -> List[Dict[str, Any]]:
         raise ValueError("Input file must contain a list of question objects.")
     return data
 
-def get_prediction(question: Dict[str, Any]) -> Dict[str, str]: #helper function to run the agent on a single question
-    prompt = question["input"]
-    domain = question.get("domain", "unknown") 
-    prediction = run_agent(prompt, domain)
-    return {"output": prediction}
 
-def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]: #Iterates through questions CONCURRENTLY (faster)
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor: #use ThreadPoolExecutor for concurrent processing
-        results_iterator = executor.map(get_prediction, questions)
-        answers = list(tqdm(
-            results_iterator, 
-            total=len(questions), 
-            desc=f"Generating Answers (Concurrent, {MAX_WORKERS} Workers)"
-        ))
+def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    answers = []
+    for question in tqdm(questions, desc="Generating Answers"):
+        prompt = question["input"]
+        domain = question.get("domain", "unknown") 
+        prediction = run_agent(prompt, domain)
+        answers.append({"output": prediction})
     return answers
 
 
