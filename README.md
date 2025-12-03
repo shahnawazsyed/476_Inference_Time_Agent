@@ -1,4 +1,4 @@
-# Final Project: Inference-Time Agent
+# CSE476 Final Project: Inference-Time Agent
 
 # Running
 $ python generate_answer_template.py
