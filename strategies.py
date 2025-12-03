@@ -18,7 +18,6 @@ import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
-
 def convertToPlainText(prompt: str): #convert from Latex to plain text
     conversion_sys_prompt = """
             You are a LaTeX→PlainText converter whose job is to take a user prompt that may contain mathematical expressions written in LaTeX and produce a single, unambiguous, machine-friendly plain-English representation of the math. The output will be fed back to a solver, so do not evaluate, simplify, or solve anything — only convert notation to clear words and ASCII-like tokens. Follow these rules exactly:
