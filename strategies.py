@@ -234,24 +234,24 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
         max_tokens=4096, 
         temperature=temp
     )["text"]
-    extract_answer_system_prompt = (
-        "Extract the complete final answer from this solution. "
-        "For plans, extract all the steps. For numerical answers, extract just the number. "
-        "Reply with only the final answer itself—no explanations, no commentary, and no preceding text.\n"
-        "--- Example ---\n"
-        "INPUT 1: The final calculation resulted in a value of 42. Final Answer: 42\n"
-        "OUTPUT 1: 42\n"
-        "INPUT 2: The required steps are: 1. Collect data. 2. Analyze. 3. Finalize. Final Answer: 1. Collect data. 2. Analyze. 3. Finalize\n"
-        "OUTPUT 2: 1. Collect data. 2. Analyze. 3. Finalize"
-    )
-    final_answer = call_model_chat_completions(
-        prompt=reasoning_resp, 
-        system=extract_answer_system_prompt, 
-        max_tokens=256, 
-        temperature=0.0
-    )["text"]
     isMath = (domain == "Math")
-    final_answer = extract_final_answer(final_answer, isMath=isMath)
-    if not final_answer:
-        return reasoning_resp.strip() if reasoning_resp else ""
-    return final_answer.strip() if final_answer is not None else ""
+    final_answer = extract_final_answer(reasoning_resp, isMath=isMath)
+    if len(final_answer) > 500 or final_answer == reasoning_resp: #i.e. extraction didnt work
+        extract_answer_system_prompt = (
+            "Extract the complete final answer from this solution. "
+            "For multiple choice questions, return ONLY the letter (A, B, C, D, or E). "
+            "For numerical answers, return just the number. "
+            "For plans or lists, extract all the steps. "
+            "For reasoning questions, extract the conclusion. "
+            "Reply with only the final answer itself—no explanations, no commentary.\n"
+            "If you cannot determine a clear final answer, return the last meaningful statement.\n"
+            "--- Examples ---\n"
+            "INPUT 1: The total cost is $25, and the tax is $2.50. Final Answer: 27.50\n"
+            "OUTPUT 1: 27.50\n"
+            "INPUT 2: The required steps are: 1. Collect data. 2. Analyze. 3. Finalize. Final Answer: 1. Collect data. 2. Analyze. 3. Finalize\n"
+            "OUTPUT 2: 1. Collect data. 2. Analyze. 3. Finalize"
+        )
+        answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=512, temperature=0.0)["text"]
+        if answer and answer.strip():
+            return answer.strip()
+    return final_answer if final_answer else reasoning_resp.strip() if reasoning_resp is not None else ""
