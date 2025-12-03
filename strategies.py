@@ -83,9 +83,9 @@ def convertToPlainText(prompt: str): #convert from Latex to plain text
 def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 7, verbose=False): #runs CoT in parallel
     results = {}
     if isMath:
-        prompt = convertToPlainText(prompt) 
+        prompt = convertToPlainText(prompt) # 1 call
     with ThreadPoolExecutor(max_workers=num_samples) as executor: #simulataneous API calls
-        future_to_ans = {
+        future_to_ans = { #each CoT = 2 max
             executor.submit(chain_of_thought, prompt, random.uniform(0.5, 1.0), isMath=isMath): i #randomized temp
             for i in range(num_samples)
         }
@@ -169,10 +169,10 @@ def chain_of_thought(prompt: str, temp: float = 0.0, isMath: bool = False) -> st
     return final_ans if final_ans else reasoning_resp.strip() if reasoning_resp is not None else "" #absolute worst case fallback
 
 def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose=False) -> str:
-    initial_ans = call_model_chat_completions(prompt=prompt, max_tokens=4096, temperature=temp)["text"]
+    initial_ans = call_model_chat_completions(prompt=prompt, max_tokens=4096, temperature=temp)["text"] #1
     refine_sys_prompt = f"You are a critical evaluator specializing in {domain}. Review the answer provided to the following prompt: {prompt} and give constructive feedback on how to improve it. Focus on accuracy, completeness, clarity, and relevance to {domain}. Point out any errors, missing information, or areas that need better explanation. Be specific about what needs improvement. Do not provide a revised answer, only feedback."
     new_ans = initial_ans
-    for _ in range (max_iter): #3 calls per iteration
+    for _ in range (max_iter): #3 calls per iteration = 9 total by default
         feedback = call_model_chat_completions(prompt=new_ans, system=refine_sys_prompt, max_tokens=2048, temperature=temp)["text"]
         sentiment_prompt = f"Rate the sentiment of this feedback with respect to how correct and high-quality the answer is, from -1 (very negative, many issues) to 1 (very positive, excellent answer). Return ONLY a single number between -1 and 1 as a decimal (e.g., 0.7, -0.3, 0.9). Do not include any other text or explanation.\n\nFeedback:\n{feedback}"
         sentiment_result = call_model_chat_completions(prompt=sentiment_prompt, max_tokens=16, temperature=0.0)["text"]
@@ -228,7 +228,7 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
         "Do not include any other commentary, and DO NOT list the assumptions separately. "
         f"Assumptions: {assumptions}"
     )
-    reasoning_resp = call_model_chat_completions(
+    reasoning_resp = call_model_chat_completions( #4
         prompt=prompt,                 
         system=reasoning_sys_prompt, 
         max_tokens=4096, 
@@ -237,7 +237,7 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
     isMath = (domain == "Math")
     final_answer = extract_final_answer(reasoning_resp, isMath=isMath)
     if len(final_answer) > 500 or final_answer == reasoning_resp: #i.e. extraction didnt work
-        extract_answer_system_prompt = (
+        extract_answer_system_prompt = ( #5
             "Extract the complete final answer from this solution. "
             "For multiple choice questions, return ONLY the letter (A, B, C, D, or E). "
             "For numerical answers, return just the number. "
