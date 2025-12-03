@@ -21,12 +21,15 @@ def run_agent(prompt: str) -> str:
         result = assumption_explicit_reasoning(prompt, domain) #5 calls
     else: #fallback -> CoT
         result = chain_of_thought(prompt)
-    if result == "":
+    if result == "": #fallback again
         new_res = self_consistency(prompt) #reduce chance of "" with multiple CoT samples
+        # debugging for empty answers:
         # if new_res == "":
         #     #print("Still empty, prompt:", prompt)
         #     print("Domain:", domain)
         # else:
         #     print("fixed")
+        #if new_res == "":
+            #print("Still empty")
         return new_res
     return result
