@@ -15,6 +15,21 @@ from api import call_model_chat_completions
 import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+def get_domain(prompt: str):
+    sys_prompt = (
+        "You are a helpful assistant. Analyze the given prompt and determine its topic domain from the following options: Math, Common Sense, Future Prediction, Coding, Planning\n"
+        "If the domain is not listed in the given options, choose the BEST option from these: Math, Common Sense, Future Prediction, Coding, Planning. DO NOT make up your own domain or decide one that is not listed in the given options..\n"
+        "DO NOT attempt to answer the prompt. Your answer should be one of the following (case sensitive) based on the topic of the prompt: Math, Common Sense, Future Prediction, Coding, Planning.")
+    
+    # Debug: Print the full response
+    full_response = call_model_chat_completions(prompt=prompt, system=sys_prompt, max_tokens=32)
+    #print("Full response:", full_response)
+    
+    res = full_response.get("text", "")
+    #print("Extracted text:", repr(res))
+    
+    return res.strip() if res else ""
+
 def convertToPlainText(prompt: str): #convert from Latex to plain text
     conversion_sys_prompt = """
             You are a LaTeX→PlainText converter whose job is to take a user prompt that may contain mathematical expressions written in LaTeX and produce a single, unambiguous, machine-friendly plain-English representation of the math. The output will be fed back to a solver, so do not evaluate, simplify, or solve anything — only convert notation to clear words and ASCII-like tokens. Follow these rules exactly:
@@ -78,11 +93,12 @@ def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 7, ve
             for i in range(num_samples)
         }
         for future in as_completed(future_to_ans):
-            ans = future.result()   
-            if ans in results:
-                results[ans] += 1
-            else:
-                results[ans] = 1
+            ans = future.result()
+            if ans and ans != "": #avoid ""
+                if ans in results:
+                    results[ans] += 1
+                else:
+                    results[ans] = 1
     if verbose:
         print("\nnum of unique results", len(results))
     if results:
@@ -137,7 +153,7 @@ def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose
         feedback = call_model_chat_completions(prompt=new_ans, system=refine_sys_prompt, max_tokens=2048, temperature=temp)["text"]
         sentiment_prompt = f"Rate the sentiment of this feedback with respect to how correct and high-quality the answer is, from -1 (very negative, many issues) to 1 (very positive, excellent answer). Return ONLY a single number between -1 and 1 as a decimal (e.g., 0.7, -0.3, 0.9). Do not include any other text or explanation.\n\nFeedback:\n{feedback}"
         sentiment_result = call_model_chat_completions(prompt=sentiment_prompt, max_tokens=16, temperature=0.0)["text"]
-        sentiment_text = sentiment_result.strip()
+        sentiment_text = sentiment_result.strip() if sentiment_result is not None else ""
         match = re.search(r'-?\d+\.?\d*', sentiment_text)
         if match:
             sentiment_score = float(match.group())
@@ -162,9 +178,8 @@ def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose
             f"Provide a REVISED, complete answer now that addresses all points of the feedback."
         )
         prev = new_ans
-        new_ans = call_model_chat_completions(prompt=formatted_feedback, system=SYS_PROMPT, max_tokens=4096, temperature=temp)["text"].strip()
-        if new_ans == "": #if revision empty just return the orig
-            return prev
+        res = call_model_chat_completions(prompt=formatted_feedback, system=SYS_PROMPT, max_tokens=4096, temperature=temp)["text"]
+        new_ans = res.strip() if res is not None else prev
     return new_ans
 
 def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -> str:
