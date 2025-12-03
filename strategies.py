@@ -20,14 +20,11 @@ def get_domain(prompt: str):
         "You are a helpful assistant. Analyze the given prompt and determine its topic domain from the following options: Math, Common Sense, Future Prediction, Coding, Planning\n"
         "If the domain is not listed in the given options, choose the BEST option from these: Math, Common Sense, Future Prediction, Coding, Planning. DO NOT make up your own domain or decide one that is not listed in the given options..\n"
         "DO NOT attempt to answer the prompt. Your answer should be one of the following (case sensitive) based on the topic of the prompt: Math, Common Sense, Future Prediction, Coding, Planning.")
-    
-    # Debug: Print the full response
     full_response = call_model_chat_completions(prompt=prompt, system=sys_prompt, max_tokens=32)
-    #print("Full response:", full_response)
-    
     res = full_response.get("text", "")
     #print("Extracted text:", repr(res))
-    
+    # if not res:
+    #     print("Full response:", full_response)
     return res.strip() if res else ""
 
 def convertToPlainText(prompt: str): #convert from Latex to plain text
@@ -106,7 +103,7 @@ def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 7, ve
         return majority_ans
     return ""
 
-def extract_final_answer(ans: str, prompt: str = "", isMath: bool = False) -> str:
+def extract_final_answer(ans: str, isMath: bool = False) -> str:
     if not ans:
         return ""
     ans = ans.strip()
@@ -117,7 +114,7 @@ def extract_final_answer(ans: str, prompt: str = "", isMath: bool = False) -> st
         if answer: 
             return answer
     mc_patterns = [ #multiple choice
-        r'(?:answer is|correct answer is|therefore|thus|option)\s*:?\s*([A-E])\b',
+        r'(?:answer is|correct answer is|therefore|thus|option|answer choice)\s*:?\s*([A-E])\b',
         r'\b([A-E])\s+is\s+(?:the\s+)?correct',
         r'(?:choose|select)\s+(?:option\s+)?([A-E])\b'
     ]
@@ -148,6 +145,8 @@ def chain_of_thought(prompt: str, temp: float = 0.0, isMath: bool = False) -> st
     cot_instruction += "At the very end, write 'Final Answer:' followed by your complete answer."
     cot_system_prompt = "You are a problem-solving assistant. Always provide complete solutions."
     reasoning_resp = call_model_chat_completions(prompt=prompt, system=cot_system_prompt+" "+cot_instruction, max_tokens=4096, temperature=temp)["text"]
+    # if reasoning_resp == "":
+    #     print("EMPTY REASONING")
     final_ans = extract_final_answer(reasoning_resp, isMath=isMath)
     if len(final_ans) > 500 or final_ans == reasoning_resp: #i.e. extraction didnt work
         extract_answer_system_prompt = (
@@ -167,7 +166,7 @@ def chain_of_thought(prompt: str, temp: float = 0.0, isMath: bool = False) -> st
         answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=512, temperature=0.0)["text"]
         if answer and answer.strip():
             return answer.strip()
-    return final_ans if final_ans else reasoning_resp.strip()
+    return final_ans if final_ans else reasoning_resp.strip() if reasoning_resp is not None else "" #absolute worst case fallback
 
 def self_refine(prompt: str, domain: str, temp: float = 0.0, max_iter=3, verbose=False) -> str:
     initial_ans = call_model_chat_completions(prompt=prompt, max_tokens=4096, temperature=temp)["text"]
