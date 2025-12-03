@@ -106,15 +106,34 @@ def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 7, ve
         return majority_ans
     return ""
 
-def extract_final_answer(ans: str) -> str: #try extracting final answer using regex
+def extract_final_answer(ans: str, prompt: str = "", isMath: bool = False) -> str:
     if not ans:
         return ""
+    ans = ans.strip()
     match = re.search(r'(?:final\s+answer\s*:?\s*)(.*)', ans, re.IGNORECASE | re.DOTALL)
     if match:
         answer = match.group(1).strip()
         answer = answer.strip('"\'')
-        return answer
-    return ans.strip()
+        if answer: 
+            return answer
+    mc_patterns = [ #multiple choice
+        r'(?:answer is|correct answer is|therefore|thus|option)\s*:?\s*([A-E])\b',
+        r'\b([A-E])\s+is\s+(?:the\s+)?correct',
+        r'(?:choose|select)\s+(?:option\s+)?([A-E])\b'
+    ]
+    for pattern in mc_patterns:
+        match = re.search(pattern, ans, re.IGNORECASE)
+        if match:
+            return match.group(1).upper()
+    match = re.search(r'\b([A-E])\s*[.)]?\s*$', ans, re.IGNORECASE) #answer ends with a letter
+    if match:
+        return match.group(1).upper()
+    if re.search(r'\d', ans): #worst case extract last number
+        numbers = re.findall(r'-?\d+\.?\d*', ans)
+        if numbers:
+            if isMath: #assuming its a math problem
+                return numbers[-1]
+    return ans
 
 def chain_of_thought(prompt: str, temp: float = 0.0, isMath: bool = False) -> str:
     cot_instruction = (
@@ -140,7 +159,7 @@ def chain_of_thought(prompt: str, temp: float = 0.0, isMath: bool = False) -> st
         "OUTPUT 2: 1. Collect data. 2. Analyze. 3. Finalize"
     )
     answer = call_model_chat_completions(prompt=reasoning_resp, system=extract_answer_system_prompt, max_tokens=256, temperature=0.0)["text"]
-    final_ans = extract_final_answer(answer) #fallback
+    final_ans = extract_final_answer(answer, isMath=isMath) #fallback
     if not final_ans: #if answer is empty just return the reasoning
         return reasoning_resp.strip() if reasoning_resp is not None else ""
     return final_ans if final_ans is not None else ""
@@ -227,7 +246,8 @@ def assumption_explicit_reasoning(prompt: str, domain: str, temp: float = 0.0) -
         max_tokens=256, 
         temperature=0.0
     )["text"]
-    final_answer = extract_final_answer(final_answer)
+    isMath = (domain == "Math")
+    final_answer = extract_final_answer(final_answer, isMath=isMath)
     if not final_answer:
         return reasoning_resp.strip() if reasoning_resp else ""
     return final_answer.strip() if final_answer is not None else ""
