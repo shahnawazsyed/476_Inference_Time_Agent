@@ -14,11 +14,6 @@ from typing import Any, Dict, List
 from tqdm import tqdm
 from agent import run_agent
 
-
-#TODO: review # of API calls
-#TODO: math answers returning in LaTeX
-#TODO: 1/6 of outputs = "" - ok?
-
 INPUT_PATH = Path("cse_476_final_project_test_data.json")
 OUTPUT_PATH = Path("cse_476_final_project_answers.json")
 
