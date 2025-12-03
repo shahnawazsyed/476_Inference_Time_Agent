@@ -148,7 +148,7 @@ def chain_of_thought(prompt: str, temp: float = 0.0, isMath: bool = False) -> st
     cot_instruction += "At the very end, write 'Final Answer:' followed by your complete answer."
     cot_system_prompt = "You are a problem-solving assistant. Always provide complete solutions."
     reasoning_resp = call_model_chat_completions(prompt=prompt, system=cot_system_prompt+" "+cot_instruction, max_tokens=4096, temperature=temp)["text"]
-    final_ans = extract_final_answer(answer, isMath=isMath)
+    final_ans = extract_final_answer(reasoning_resp, isMath=isMath)
     if len(final_ans) > 500 or final_ans == reasoning_resp: #i.e. extraction didnt work
         extract_answer_system_prompt = (
             "Extract the complete final answer from this solution. "
