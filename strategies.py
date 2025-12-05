@@ -40,18 +40,17 @@ def convertToPlainText(prompt: str): #convert from Latex to plain text
             - For subscripts and superscripts, use readable phrases (see examples).
             - Spell Greek letters and standard symbols (e.g., \\alpha → alpha, \\pi → pi).
             - Do not attempt to compute numeric values or simplify algebraic expressions.
-            - Do not add commentary like “this means” or “note that”.
+            - Do not add commentary like “this means” or “note that”
             3. Preferred verbal mappings
             - + → plus; - → minus; \\times or \\cdot → times; \\div or / → divided by or over (use over for fractions).
             - = → equals; \\neq → not equal to; \\le / \\leq → less than or equal to; \\ge / \\geq → greater than or equal to.
-            - Superscript: x^2 → x squared OR x to the power of 2; x^{n+1} → x to the power of (n plus 1).
+            - Superscript: x^2 → x squared OR x to the power of 2; x^{n+1} → x to the power of (n plus 1)
             - Subscript: a_i → a sub i; x_{ij} → x sub i j.
             - Fractions: \\frac{a}{b} → a over b (or a divided by b); keep numerator/denominator grouping with parentheses when complex: ((a plus b) over (c minus d)).
             - Summation/product: \\sum_{i=1}^n a_i → sum from i = 1 to n of a sub i; \\prod → product from ... of ....
-            - Limits: \\lim_{x\\to 0} f(x) → limit as x approaches 0 of f(x).
+            - Limits: \\lim_{x\\to 0} f(x) → limit as x approaches 0 of f(x)
             - Integrals: \\int_a^b f(x)\\,dx → integral from a to b of f(x) dx.
-            - Derivatives: \\frac{d}{dx} f(x) → derivative of f(x) with respect to x; f'(x) → f prime of x.
-            - Partial derivatives: \\frac{\\partial f}{\\partial x} → partial derivative of f with respect to x.
+            - Derivatives: \\frac{d}{dx} f(x) → derivative of f(x) with respect to x; f'(x) → f prime of x
             - Functions: keep common names: \\sin x → sin(x), \\ln x → ln(x).
             - Sets and logic: \\in → in; \\notin → not in; \\forall x → for all x; \\exists → there exists.
             - Matrices: \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix} → 2 by 2 matrix with rows [a, b] and [c, d].
