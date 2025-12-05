@@ -84,7 +84,7 @@ def self_consistency(prompt: str, isMath: bool = False, num_samples: int = 7, ve
     results = {}
     if isMath:
         prompt = convertToPlainText(prompt) # 1 call
-    with ThreadPoolExecutor(max_workers=num_samples) as executor: #simulataneous API calls
+    with ThreadPoolExecutor(max_workers=2) as executor: #simulataneous API calls
         future_to_ans = { #each CoT = 2 max
             executor.submit(chain_of_thought, prompt, random.uniform(0.5, 1.0), isMath=isMath): i #randomized temp
             for i in range(num_samples)
