@@ -29,3 +29,5 @@ This strategy is best used for the "future prediction” domain. It enhances the
 While not directly used by the agent, CoT reasoning is used by nearly all other strategies. It works by providing an initial instruction to the model to provide a full, complete solution to the prompt while also detailing its thought process, forcing the LLM to "show its work". The final answer is then extracted from the initial output, including the steps if the prompt is related to planning. 
 ## Helper method: extract_final_answer(ans, isMath)
 This helper method uses regex parsing to extract the final answer from LLM output. It searches (chronologically) for “final answer”, multiple choice options (e.g. A, B, C), and the final number in the answer if the domain of the prompt is “Math”. This provides a deterministic answer extraction from reasoning outputs.  
+# Evaluation
+During development, the agent was evaluated on its answers by prompting the model to judge (True/False) if the provided answer is sufficient to the expected outcome in the dev data. An accuracy metric was defined as the % of questions that were listed as "True".
