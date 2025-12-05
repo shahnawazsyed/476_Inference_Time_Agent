@@ -31,7 +31,7 @@ def build_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     for question in tqdm(questions, desc="Generating Answers"):
         prompt = question["input"]
         domain = question.get("domain", "unknown") 
-        prediction = run_agent(prompt, domain)
+        prediction = run_agent(prompt)
         answers.append({"output": prediction})
     return answers
 
