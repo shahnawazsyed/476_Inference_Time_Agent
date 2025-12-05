@@ -25,10 +25,10 @@ def run_agent(prompt: str) -> str:
         #no point in re running Self consistency with math or common sense since we originally did
         if domain == "Planning" or domain == "Coding":
             new_res = self_consistency(prompt, num_samples=3) #3 * 2 = 6 more API calls --> 17 total, ensures majority vote with odd #
+            return new_res
         elif domain == "Future Prediction":
             new_res = self_consistency(prompt, num_samples=5) #5 * 2 = 10 more API calls --> 16 total 
-        if new_res:
-            if new_res == "":
-                print("Still empty after retry")
-            else: return new_res
+            return new_res
+        else:
+            return result
     return result
