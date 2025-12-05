@@ -26,14 +26,9 @@ def run_agent(prompt: str) -> str:
         if domain == "Planning" or domain == "Coding":
             new_res = self_consistency(prompt, num_samples=3) #3 * 2 = 6 more API calls --> 17 total, ensures majority vote with odd #
         elif domain == "Future Prediction":
-            new_res = self_consistency(prompt, num_samples=5) #5 * 2 = 10 more API calls --> 16 total
-        # debugging for empty answers:
-        # if new_res == "":
-        #     #print("Still empty, prompt:", prompt)
-        #     print("Domain:", domain)
-        # else:
-        #     print("fixed")
-        #if new_res == "":
-            #print("Still empty")
-        return new_res
+            new_res = self_consistency(prompt, num_samples=5) #5 * 2 = 10 more API calls --> 16 total 
+        if new_res:
+            if new_res == "":
+                print("Still empty after retry")
+            else: return new_res
     return result
